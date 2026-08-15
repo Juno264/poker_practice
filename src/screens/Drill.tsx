@@ -151,7 +151,14 @@ export default function Drill({ chartIds, onExit }: DrillProps) {
           <ActionButtons slots={slots} active={currentChart.actions} onChoose={handleChoose} />
         </>
       ) : (
-        state.score !== null && <Feedback score={state.score} onNext={handleNext} />
+        state.score !== null && (
+          <Feedback
+            score={state.score}
+            hand={state.current.hand}
+            chartLabel={`${currentChart.heroPosition} オープン`}
+            onNext={handleNext}
+          />
+        )
       )}
     </div>
   );
