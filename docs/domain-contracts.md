@@ -339,6 +339,62 @@ export function responseMsHistogram(attempts: readonly Attempt[], binMs: number)
 
 ---
 
+## 6.5 `src/data/loadCharts.ts`
+
+```ts
+export const CHARTS: readonly RangeChart[];        // ポジション順 UTG, HJ, CO, BTN, SB
+export function getChart(id: string): RangeChart;  // 未知の id は throw
+export function poolFor(chartIds: readonly string[]): Question[];
+```
+
+- `import.meta.glob('../../data/ranges/*.json', { eager: true })` で取り込む
+- 各チャートを `validateChart` にかけ、**error が 1 件でもあれば throw**（起動時に落とす）
+- warn は `console.warn` に出すだけ
+- 欠損ハンドを `{ fold: 1.0 }` で補完し、169 ハンド揃った `RangeChart` を返す
+- snake_case → camelCase の変換はここだけ
+- `id` の重複は throw
+
+## 6.6 `src/state/drill.ts`
+
+reducer は純粋。副作用の値（抽選結果・時刻）は action の payload で受け取る（`docs/architecture.md` §3）。
+
+```ts
+export type DrillState = {
+  phase: 'question' | 'feedback';
+  pool: readonly Question[];
+  current: Question;
+  score: ScoreResult | null;
+  recent: readonly WeightKey[];
+  weights: Record<WeightKey, number>;
+  session: { asked: number; askedNonGray: number; correctNonGray: number; responseMs: number[] };
+  pendingAttempts: readonly Attempt[];
+};
+
+export type DrillEvent =
+  | { type: 'ANSWER'; chosen: Action; responseMs: number; ts: number }
+  | { type: 'NEXT'; question: Question }
+  | { type: 'RESET_WEIGHTS' };
+
+export function initDrill(pool: readonly Question[], weights: Record<WeightKey, number>, first: Question): DrillState;
+export function drillReducer(state: DrillState, event: DrillEvent): DrillState;
+export function takePendingAttempts(state: DrillState): DrillState;  // フラッシュ後に空にする
+```
+
+- `ANSWER` は `phase === 'question'` のときだけ効く（二重タップで 2 件記録しない）
+- `NEXT` は `phase === 'feedback'` のときだけ効く
+- `ANSWER` で `weights` と `recent` を更新し、`pendingAttempts` に 1 件積む
+- グレーハンドは `askedNonGray` / `correctNonGray` に数えない（`CLAUDE.md` §7）
+
+## 6.7 アクションボタンの並び（`ActionButtons`）
+
+**表示順は固定**：`fold` を最も左、攻撃的なアクション（`raise` / `3bet` / `push`）を最も右、
+`limp` / `call` は中央。
+
+**決定：スロット数はセッション中固定にする。** 「全部混ぜる」では SB（3 アクション）と
+他 4 チャート（2 アクション）が混ざる。ボタン数を問題ごとに変えると押す位置が毎回ずれ、
+**反応時間の計測が UI の都合で汚れる**。セッション内の最大アクション数でスロットを確保し、
+そのチャートに無いアクションのスロットは空のまま描画する。
+
 ## 7. `src/storage/local.ts`
 
 純粋ではない唯一の非 UI モジュール。ドメイン層から import しない。
