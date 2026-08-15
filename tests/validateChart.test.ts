@@ -13,12 +13,12 @@ function errorCodes(issues: ReturnType<typeof validateChart>): string[] {
 }
 
 describe('validateChart — fixtures', () => {
-  it('valid_minimal.json produces no errors (missing-hands warn is allowed)', () => {
+  it('valid_minimal.json produces no errors (missing-hands / suspicious-monotonicity warn is allowed)', () => {
     const issues = validateChart(validMinimal, 'valid_minimal.json');
     expect(errorCodes(issues)).toEqual([]);
     for (const issue of issues) {
       expect(issue.level).toBe('warn');
-      expect(issue.code).toBe('missing-hands');
+      expect(['missing-hands', 'suspicious-monotonicity']).toContain(issue.code);
     }
   });
 
@@ -155,5 +155,80 @@ describe('validateChart — remaining §5 codes not covered by a dedicated fixtu
       'inline-bad-freq-over-one',
     );
     expect(errorCodes(issues)).toContain('bad-freq');
+  });
+});
+
+describe('validateChart — suspicious-monotonicity (new WARNING check)', () => {
+  // 76s is a stronger hand than 65s (gap-1 ladder). Builds a minimal chart
+  // containing only those two hands, with the given "fold" frequency for each
+  // (entry frequency = 1 - fold).
+  function chartWithFolds(strongerFold: number, weakerFold: number): unknown {
+    return {
+      schema_version: 1,
+      id: 'monotonicity-test',
+      format: '6max',
+      stack_bb: 100,
+      spot: 'RFI',
+      hero_position: 'BTN',
+      villain_position: null,
+      actions: ['raise', 'fold'],
+      source: { name: 'inline test fixture' },
+      ranges: {
+        '76s': { raise: 1 - strongerFold, fold: strongerFold },
+        '65s': { raise: 1 - weakerFold, fold: weakerFold },
+      },
+    };
+  }
+
+  function warnCodes(issues: ReturnType<typeof validateChart>): string[] {
+    return issues.filter((i) => i.level === 'warn').map((i) => i.code);
+  }
+
+  it('flags a weaker hand (76s vs 65s) played more often than the stronger one, naming the stronger hand', () => {
+    // 65s entry 0.9 (fold 0.1), 76s entry 0.1 (fold 0.9) — the weaker hand
+    // (65s) is played far more often than the stronger hand (76s).
+    const issues = validateChart(chartWithFolds(0.9, 0.1), 'inline-monotonicity-violation');
+    const monotonicity = issues.filter((i) => i.code === 'suspicious-monotonicity');
+    expect(monotonicity.length).toBeGreaterThan(0);
+    expect(monotonicity.every((i) => i.level === 'warn')).toBe(true);
+    expect(monotonicity.some((i) => i.hand === '76s')).toBe(true);
+  });
+
+  it('a clean monotone chart (stronger hand played at least as often) produces no warning', () => {
+    // 76s entry 0.9 (fold 0.1), 65s entry 0.1 (fold 0.9) — correctly monotone.
+    const issues = validateChart(chartWithFolds(0.1, 0.9), 'inline-monotonicity-clean');
+    expect(warnCodes(issues)).not.toContain('suspicious-monotonicity');
+  });
+
+  it('a gap of exactly 0.05 does not warn', () => {
+    // strong entry 0.40 (fold 0.60), weak entry 0.45 (fold 0.55) => delta 0.05
+    const issues = validateChart(chartWithFolds(0.6, 0.55), 'inline-monotonicity-boundary-no-warn');
+    expect(warnCodes(issues)).not.toContain('suspicious-monotonicity');
+  });
+
+  it('a gap of 0.06 does warn', () => {
+    // strong entry 0.40 (fold 0.60), weak entry 0.46 (fold 0.54) => delta 0.06
+    const issues = validateChart(chartWithFolds(0.6, 0.54), 'inline-monotonicity-boundary-warn');
+    expect(warnCodes(issues)).toContain('suspicious-monotonicity');
+  });
+
+  it('a chart whose actions lack "fold" produces no suspicious-monotonicity warning', () => {
+    const chart = {
+      schema_version: 1,
+      id: 'monotonicity-no-fold-action',
+      format: '6max',
+      stack_bb: 100,
+      spot: 'RFI',
+      hero_position: 'BTN',
+      villain_position: null,
+      actions: ['raise', 'limp'],
+      source: { name: 'inline test fixture' },
+      ranges: {
+        '76s': { raise: 0.1, limp: 0.9 },
+        '65s': { raise: 0.9, limp: 0.1 },
+      },
+    };
+    const issues = validateChart(chart, 'inline-monotonicity-no-fold-action');
+    expect(warnCodes(issues)).not.toContain('suspicious-monotonicity');
   });
 });

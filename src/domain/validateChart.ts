@@ -6,8 +6,8 @@
  * problems found. `scripts/validate-ranges.ts` is the I/O shell around this.
  */
 
-import type { Hand } from './types';
-import { ACTIONS, POSITIONS, SPOTS } from './types';
+import type { Hand, Rank } from './types';
+import { ACTIONS, POSITIONS, RANKS, SPOTS } from './types';
 import { ALL_HANDS, normalizeHand } from './hands';
 
 export type IssueLevel = 'error' | 'warn';
@@ -26,6 +26,70 @@ function warnIssue(code: string, message: string, hand?: string): ValidationIssu
 }
 
 const FREQ_TOLERANCE = 0.01;
+
+/**
+ * §5 "suspicious-monotonicity" tolerance: a strictly stronger hand may be
+ * played up to this much less often than a strictly weaker one before it's
+ * flagged as a likely transcription error.
+ */
+const MONOTONICITY_TOLERANCE = 0.05;
+
+function nonPairHand(high: Rank, low: Rank, suffix: 's' | 'o'): Hand {
+  return normalizeHand(`${high}${low}${suffix}`);
+}
+
+function pairHand(rank: Rank): Hand {
+  return normalizeHand(`${rank}${rank}`);
+}
+
+/**
+ * All adjacent-rung dominance relations used by the "suspicious-monotonicity"
+ * warning, as `[stronger, weaker]` hand pairs. Only adjacent rungs are
+ * compared (not every possible pair) so the output stays readable.
+ *
+ * Deliberately limited to relations where the stronger hand has the same
+ * shape and both cards at least as high, or is strictly the same two ranks
+ * suited — anything that also changes connectivity (e.g. a same-high-rank
+ * "kicker" comparison, or a same-low-rank "top card" comparison) is NOT
+ * sound: wheel-card kickers make straights the rank above cannot (A5o >
+ * A6o), and widening the top card also widens the gap between the cards, so
+ * a solver can legitimately prefer the more connected hand (86s over 96s).
+ */
+function buildDominancePairs(): Array<[Hand, Hand]> {
+  const pairs: Array<[Hand, Hand]> = [];
+  const n = RANKS.length;
+
+  // 1. suited-vs-offsuit — same two ranks, suited stronger than offsuit.
+  for (let hi = 0; hi < n; hi++) {
+    for (let li = hi + 1; li < n; li++) {
+      const high = RANKS[hi]!;
+      const low = RANKS[li]!;
+      pairs.push([nonPairHand(high, low, 's'), nonPairHand(high, low, 'o')]);
+    }
+  }
+
+  // 2. gap-ladder — gaps of 1, 2 and 3, suited and offsuit, adjacent rungs.
+  for (const gap of [1, 2, 3] as const) {
+    for (const suffix of ['s', 'o'] as const) {
+      const ladder: Hand[] = [];
+      for (let hi = 0; hi + gap < n; hi++) {
+        ladder.push(nonPairHand(RANKS[hi]!, RANKS[hi + gap]!, suffix));
+      }
+      for (let i = 0; i < ladder.length - 1; i++) {
+        pairs.push([ladder[i]!, ladder[i + 1]!]);
+      }
+    }
+  }
+
+  // 3. pair — higher pair stronger than the adjacent lower pair.
+  for (let i = 0; i < n - 1; i++) {
+    pairs.push([pairHand(RANKS[i]!), pairHand(RANKS[i + 1]!)]);
+  }
+
+  return pairs;
+}
+
+const DOMINANCE_PAIRS = buildDominancePairs();
 
 export function validateChart(raw: unknown, label: string): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
@@ -115,6 +179,10 @@ export function validateChart(raw: unknown, label: string): ValidationIssue[] {
 
   // --- ranges ------------------------------------------------------------------
   const validHands = new Set<Hand>();
+  // Entry frequency per hand (1 - fold), used only by the suspicious-monotonicity
+  // check below. Populated only for hands whose "fold" value (if present) is a
+  // valid, finite number in [0, 1]; other data problems are reported elsewhere.
+  const entryByHand = new Map<Hand, number>();
   if (!isPlainObject(obj.ranges)) {
     issues.push(err('bad-schema', `${label}: "ranges" is missing or not an object`));
   } else {
@@ -144,6 +212,16 @@ export function validateChart(raw: unknown, label: string): ValidationIssue[] {
       if (!isPlainObject(rawFreqs)) {
         issues.push(err('bad-schema', `${label}: frequencies for hand "${rawKey}" must be an object`, rawKey));
         continue;
+      }
+
+      if (normalized !== null) {
+        const foldValue = rawFreqs.fold;
+        if (foldValue === undefined) {
+          entryByHand.set(normalized, 1);
+        } else if (typeof foldValue === 'number' && Number.isFinite(foldValue) && foldValue >= 0 && foldValue <= 1) {
+          entryByHand.set(normalized, 1 - foldValue);
+        }
+        // else: "fold" present but invalid — already reported as bad-freq; skip.
       }
 
       let sum = 0;
@@ -193,6 +271,43 @@ export function validateChart(raw: unknown, label: string): ValidationIssue[] {
         `${label}: ${missingHands.length} of ${ALL_HANDS.length} hands are missing (first 10: ${preview})`,
       ),
     );
+  }
+
+  // --- suspicious-monotonicity --------------------------------------------------
+  // A hand played MORE often than a strictly stronger hand is almost always a
+  // transcription/extraction mistake, not a real solver output. Compares entry
+  // frequency (1 - fold), not raise, so charts with a limp/call branch don't
+  // produce false positives just from shifting weight between raise and limp.
+  if (declaredActions !== null && declaredActions.includes('fold')) {
+    const found: Array<{ issue: ValidationIssue; delta: number }> = [];
+    const seen = new Set<string>();
+
+    for (const [stronger, weaker] of DOMINANCE_PAIRS) {
+      const key = `${stronger}|${weaker}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      const strongEntry = entryByHand.get(stronger);
+      const weakEntry = entryByHand.get(weaker);
+      if (strongEntry === undefined || weakEntry === undefined) continue;
+
+      const delta = weakEntry - strongEntry;
+      if (delta > MONOTONICITY_TOLERANCE) {
+        found.push({
+          delta,
+          issue: warnIssue(
+            'suspicious-monotonicity',
+            `${label}: ${stronger} is played less than ${weaker} (${strongEntry.toFixed(2)} vs ${weakEntry.toFixed(2)}, +${delta.toFixed(2)}) — weaker hand played more often; check the source`,
+            stronger,
+          ),
+        });
+      }
+    }
+
+    found.sort((a, b) => b.delta - a.delta);
+    for (const f of found) {
+      issues.push(f.issue);
+    }
   }
 
   return issues;
