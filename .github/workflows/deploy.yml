@@ -2,7 +2,12 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    # The repository has no `main` yet; this branch is the default branch, so
+    # deploying only from `main` would never run. Both are listed so the
+    # workflow keeps working after the branch is eventually merged.
+    branches:
+      - main
+      - claude/project-design-token-optimization-348g2i
   workflow_dispatch:
 
 permissions:
