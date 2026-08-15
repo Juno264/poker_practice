@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "invalid_freq_sum",
+  "format": "6max",
+  "stack_bb": 100,
+  "spot": "RFI",
+  "hero_position": "CO",
+  "villain_position": null,
+  "actions": ["raise", "fold"],
+  "source": {
+    "name": "SYNTHETIC — test fixture, not a real range",
+    "retrieved_at": "2026-08-15",
+    "entered_by": "test",
+    "notes": "T9s sums to 0.98, outside 1.0 +/- 0.01. Expect issue code freq-sum."
+  },
+  "ranges": {
+    "AA": { "raise": 1.0, "fold": 0.0 },
+    "T9s": { "raise": 0.5, "fold": 0.48 }
+  }
+}

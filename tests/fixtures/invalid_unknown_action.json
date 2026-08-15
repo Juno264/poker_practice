@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "invalid_unknown_action",
+  "format": "6max",
+  "stack_bb": 100,
+  "spot": "RFI",
+  "hero_position": "SB",
+  "villain_position": null,
+  "actions": ["raise", "fold"],
+  "source": {
+    "name": "SYNTHETIC — test fixture, not a real range",
+    "retrieved_at": "2026-08-15",
+    "entered_by": "test",
+    "notes": "limp is not declared in actions. Expect issue code unknown-action."
+  },
+  "ranges": {
+    "AA": { "raise": 1.0, "fold": 0.0 },
+    "K9o": { "raise": 0.3, "limp": 0.2, "fold": 0.5 }
+  }
+}

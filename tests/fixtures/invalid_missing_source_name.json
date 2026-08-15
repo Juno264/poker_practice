@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "id": "invalid_missing_source_name",
+  "format": "6max",
+  "stack_bb": 100,
+  "spot": "RFI",
+  "hero_position": "UTG",
+  "villain_position": null,
+  "actions": ["raise", "fold"],
+  "source": {
+    "name": "",
+    "retrieved_at": "2026-08-15",
+    "entered_by": "test",
+    "notes": "SYNTHETIC test fixture. Empty source.name. Expect issue code missing-source-name."
+  },
+  "ranges": {
+    "AA": { "raise": 1.0, "fold": 0.0 }
+  }
+}

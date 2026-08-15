@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "valid_minimal",
+  "format": "6max",
+  "stack_bb": 100,
+  "spot": "RFI",
+  "hero_position": "BTN",
+  "villain_position": null,
+  "actions": ["raise", "fold"],
+  "source": {
+    "name": "SYNTHETIC — test fixture, not a real range",
+    "url": "",
+    "retrieved_at": "2026-08-15",
+    "entered_by": "test",
+    "notes": "Numbers are invented for unit tests. Never use for study. Missing hands are intentional (tests the missing-hands warning)."
+  },
+  "ranges": {
+    "AA": { "raise": 1.0, "fold": 0.0 },
+    "72o": { "raise": 0.0, "fold": 1.0 },
+    "K9o": { "raise": 0.32, "fold": 0.68 },
+    "T9s": { "raise": 0.55, "fold": 0.45 },
+    "A5s": { "raise": 0.5, "fold": 0.5 },
+    "J8s": { "raise": 0.575, "fold": 0.425 },
+    "Q7o": { "raise": 0.995, "fold": 0.0 }
+  }
+}

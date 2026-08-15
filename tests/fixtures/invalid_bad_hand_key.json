@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "invalid_bad_hand_key",
+  "format": "6max",
+  "stack_bb": 100,
+  "spot": "RFI",
+  "hero_position": "BTN",
+  "villain_position": null,
+  "actions": ["raise", "fold"],
+  "source": {
+    "name": "SYNTHETIC — test fixture, not a real range",
+    "retrieved_at": "2026-08-15",
+    "entered_by": "test",
+    "notes": "KAs violates the high-rank-first rule. Expect issue code bad-hand-key."
+  },
+  "ranges": {
+    "AA": { "raise": 1.0, "fold": 0.0 },
+    "KAs": { "raise": 1.0, "fold": 0.0 }
+  }
+}
