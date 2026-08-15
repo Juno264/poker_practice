@@ -267,6 +267,11 @@ export function validateChart(raw: unknown, label: string): ValidationIssue[];
 |---|---|
 | `missing-hands` | 169 ハンドが揃っていない。**件数と、先頭 10 件のハンド名**をメッセージに含める |
 
+**決定：正規化できたキーはハンド網羅の集計に数える。** JSON のキーは元から一意なので、
+「正規表記に一致しないキー」を集計から外すと `duplicate-hand` が到達不能になる。
+`aa` のような**パースはできるが正規表記でない**キーは、`bad-hand-key` を出しつつ
+`AA` として網羅集計に数える。同じハンドに正規化されるキーが 2 つあれば `duplicate-hand` も出る。
+
 **決定：`missing-fold-action` を error にした。** `CLAUDE.md` §6.2 は欠損を `fold: 1.0` として扱うと
 定めているが、`push_fold` 以外で `actions` に `fold` が無いチャートを将来足したとき、補完が
 成立しないまま warn だけ出て静かに壊れる。補完できないなら止める。

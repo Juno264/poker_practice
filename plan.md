@@ -31,34 +31,34 @@
 ### タスク
 
 **1. 足場**
-- [ ] Vite + React + TS + Tailwind でプロジェクト初期化
-- [ ] `tsconfig` を `strict: true` に
-- [ ] Vitest を導入
+- [x] Vite + React + TS + Tailwind でプロジェクト初期化
+- [x] `tsconfig` を `strict: true` に
+- [x] Vitest を導入
 
 **2. ドメイン層（先に書く。UI より前）**
 
 > シグネチャと境界条件は `docs/domain-contracts.md` で確定済み。実装時はそれを見る。
 
-- [ ] `types.ts`：`Hand` / `Action` / `RangeChart` / `Attempt`
-- [ ] `hands.ts`：`ALL_HANDS` の生成、`normalizeHand`、`handToGridPos`、`comboCount`
-- [ ] `hands.test.ts`：169 個であること、`KAs` を弾くこと、グリッド座標が重複しないこと
-- [ ] `scoring.ts`：`freqGap` / `isGray` / `correct` の算出
-- [ ] `scoring.test.ts`：純粋レンジ、混合レンジ、境界（`maxFreq - secondFreq == 0.15`）
-- [ ] `sampler.ts`：重み更新と重み付き抽選、クールダウン（乱数は注入）
-- [ ] `sampler.test.ts`：シード固定で分布を検証、直近 8 問に同一ハンドが出ないこと
-- [ ] `validateChart.ts` + テスト（`scripts/validate-ranges.ts` と CI が共用する純粋関数）
+- [x] `types.ts`：`Hand` / `Action` / `RangeChart` / `Attempt`
+- [x] `hands.ts`：`ALL_HANDS` の生成、`normalizeHand`、`handToGridPos`、`comboCount`
+- [x] `hands.test.ts`：169 個であること、`KAs` を弾くこと、グリッド座標が重複しないこと
+- [x] `scoring.ts`：`freqGap` / `isGray` / `correct` の算出
+- [x] `scoring.test.ts`：純粋レンジ、混合レンジ、境界（`maxFreq - secondFreq == 0.15`）
+- [x] `sampler.ts`：重み更新と重み付き抽選、クールダウン（乱数は注入）
+- [x] `sampler.test.ts`：シード固定で分布を検証、直近 8 問に同一ハンドが出ないこと
+- [x] `validateChart.ts` + テスト（`scripts/validate-ranges.ts` と CI が共用する純粋関数）
 
 **3. データ**
-- [ ] `data/README.md` に入力手順を書く（出典の記録方法を含む）
-- [ ] `scripts/validate-ranges.ts` を実装
+- [x] `data/README.md` に入力手順を書く（出典の記録方法を含む）
+- [x] `scripts/validate-ranges.ts` を実装
 - [ ] **BTN のチャートを 1 つだけ手入力する**（残り 4 つは後回し。1 チャートあれば動作確認できる）
 - [ ] 残り 4 チャートを入力
 
 > ⚠️ レンジの数値は Claude が生成しない。出典から人間が入力する（`CLAUDE.md` §2.1）。
 
 **4. 永続化**
-- [ ] `storage/local.ts`：attempts と weights の読み書き
-- [ ] スキーマバージョンを持たせ、不一致時は捨てて初期化する
+- [x] `storage/local.ts`：attempts と weights の読み書き
+- [x] スキーマバージョンを持たせ、不一致時は捨てて初期化する
 
 **5. UI（最小）**
 - [ ] `Drill.tsx`：ハンド表示 → アクション選択 → 頻度内訳のフィードバック → 次の問題
@@ -68,8 +68,8 @@
 
 **6. デプロイ**
 - [ ] GitHub Actions で Pages にデプロイ
-- [ ] `vite.config.ts` の `base` をリポジトリ名に合わせる（Pages でよく踏む）
-- [ ] `vite-plugin-pwa` を入れる（**オフライン必須**。地下鉄で開けないと主要ユースケースが死ぬ）
+- [x] `vite.config.ts` の `base` をリポジトリ名に合わせる（Pages でよく踏む）
+- [x] `vite-plugin-pwa` を入れる（**オフライン必須**。地下鉄で開けないと主要ユースケースが死ぬ）
 - [ ] スマホのホーム画面に追加し、**機内モードで**動くか確認
 
 ### v0.1 で意図的にやらないこと
