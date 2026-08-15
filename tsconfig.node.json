@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "composite": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "outDir": "./node_modules/.tmp/tsconfig.node",
+    "types": ["node"]
+  },
+  "include": ["vite.config.ts"]
+}
